@@ -15,14 +15,14 @@ def load_image_grayscale(name):
     return img
 
 
-def save_processed_image(name, img):
+def save_processed_image(name, img, prefix=""):
     """
     Saves an img in PROCESSED_IMAGES_PATH with the supplisuperiored name.
     :param name:
     :param img:
     :return:
     """
-    path = get_processed_image_path(name)
+    path = get_processed_image_path(name, prefix)
     cv2.imwrite(path, img)
     return path
 
@@ -71,12 +71,33 @@ def img_to_binary(name, filter_size=7, threshold=100, keep_dims=True):
         processed_img = np.array(processed_img, dtype='uint8')
         processed_img = cv2.resize(processed_img, dsize=(img.shape[1], img.shape[0]), interpolation=cv2.INTER_NEAREST)
 
-    return save_processed_image(name, processed_img)
+    return save_processed_image(name, processed_img, prefix="2colors_")
+
+
+def img_to_3colors(name, filter_size=7, threshold1=100, threshold2=200, keep_dims=True):
+    """
+    Loads an image, apply the desired filter, and saves it in the processed images folder, returning its path.
+    :param name:
+    :param filter_size:
+    :param threshold:
+    :param keep_dims:
+    :return:
+    """
+    img = load_image_grayscale(name)
+    grey_spots = apply_filter(img, filter_size=filter_size, padding=int(filter_size/2), stride=filter_size,
+                               threshold=threshold1)
+    dark_spots = apply_filter(img, filter_size=filter_size, padding=int(filter_size/2), stride=filter_size,
+                               threshold=threshold2)
+    if keep_dims:
+        processed_img = np.array(grey_spots, dtype='uint8')/2+np.array(dark_spots, dtype='uint8')/2
+        processed_img = cv2.resize(processed_img, dsize=(img.shape[1], img.shape[0]), interpolation=cv2.INTER_NEAREST)
+
+    return save_processed_image(name, processed_img, prefix="3colors_")
 
 
 def get_original_image_path(name):
     return os.path.join(ORIGINAL_IMAGES_PATH, name)
 
 
-def get_processed_image_path(name):
-    return os.path.join(PROCESSED_IMAGES_PATH, name)
+def get_processed_image_path(name, prefix=""):
+    return os.path.join(PROCESSED_IMAGES_PATH, prefix+name)
