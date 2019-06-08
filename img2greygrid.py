@@ -66,8 +66,6 @@ def apply_filter(img, thresholds, filter_size=7, padding=3, stride=7):
 
 
 def draw_lines_grayscale(image, filter_size):
-    pixel_size = (int(image.shape[1]/filter_size), int(image.shape[1]/filter_size))
-
     for i in range(image.shape[0]):
         if i % filter_size == 0:
             image[i, :] = np.ones(image.shape[1])*LINE_COLOR
