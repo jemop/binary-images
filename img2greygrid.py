@@ -62,10 +62,11 @@ def apply_filter(img, thresholds, filter_size=7, padding=3, stride=7):
     for t in thresholds:
         values += (processed_image>t)*1
 
-    return values*255/len(thresholds)
+    return values
 
 
 def draw_lines_grayscale(image, filter_size):
+
     for i in range(image.shape[0]):
         if i % filter_size == 0:
             image[i, :] = np.ones(image.shape[1])*LINE_COLOR
@@ -75,6 +76,49 @@ def draw_lines_grayscale(image, filter_size):
             image[:, j] = np.ones(image.shape[0])*LINE_COLOR
 
     return image
+
+
+def write_label_in_coords(image, y, x, value):
+    # Write some Text
+    font = cv2.FONT_HERSHEY_SCRIPT_SIMPLEX
+    bottomLeftCornerOfText = (x, y)
+    fontScale = 0.2
+    fontColor = (0, 0, 0)
+    lineType = 1
+
+    cv2.putText(image, "%d" % value,
+                bottomLeftCornerOfText,
+                font,
+                fontScale,
+                fontColor,
+                lineType)
+    return image
+
+
+def resize_and_label(image, filter_size, n_colors, draw_lines=True):
+    result_image = cv2.resize(image*255/n_colors,
+                              dsize=(image.shape[1] * filter_size,
+                                     image.shape[0] * filter_size),
+                              interpolation=cv2.INTER_NEAREST)
+    max_value = np.max(image)
+
+    labeled_image = np.ones(result_image.shape)*255
+
+    for i in range(image.shape[0]):
+        for j in range(image.shape[1]):
+            if image[i,j]==max_value:
+                continue
+            labeled_image = write_label_in_coords(labeled_image,
+                                                  i*filter_size+int(filter_size/2),
+                                                  j*filter_size+int(filter_size/2),
+                                                  image[i][j])
+
+    if draw_lines:
+        result_image = draw_lines_grayscale(result_image, filter_size)
+        labeled_image = draw_lines_grayscale(labeled_image, filter_size)
+
+    return result_image, labeled_image
+
 
 
 def img_to_ncolors(name, thresholds, filter_size=7, draw_lines=True):
@@ -91,20 +135,18 @@ def img_to_ncolors(name, thresholds, filter_size=7, draw_lines=True):
     processed_img = apply_filter(img, thresholds, filter_size=filter_size, padding=int(filter_size/2),
                                  stride=filter_size)
 
-    processed_img = cv2.resize(processed_img, dsize=(processed_img.shape[1]*filter_size,
-                                                     processed_img.shape[0]*filter_size),
-                               interpolation=cv2.INTER_NEAREST)
+    result_image, labeled_image = resize_and_label(processed_img, filter_size, n_colors=len(thresholds),
+                                                   draw_lines=draw_lines)
 
-    if draw_lines:
-        processed_img = draw_lines_grayscale(processed_img, filter_size)
-
-    return save_processed_image(name, processed_img, prefix=str(len(thresholds)+1)+"colors_")
+    return save_processed_image(name, result_image, prefix=str(len(thresholds)+1)+"colors_result_"),\
+           save_processed_image(name, labeled_image, prefix=str(len(thresholds)+1)+"colors_base_")
 
 
 if __name__=="__main__":
 
     # File must be located in data/original_images/
-    name = "girl_dancing.jpg"
+    # name = "girl_dancing.jpg"
+    name = "diegolau1.jpeg"
 
-    processed_ncolors_path = img_to_ncolors(name, thresholds=[50, 100, 150, 200, 230], filter_size=15)
-    print("Processed images succesfully.")
+    result_path, base_path = img_to_ncolors(name, thresholds=[50, 100, 200], filter_size=15)
+    print("Images processed succesfully.")
